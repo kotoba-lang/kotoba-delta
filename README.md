@@ -42,6 +42,16 @@ nbb --classpath src bin/delta.cljs project --log ops.edn --repo DIR   # 決定�
 nbb --classpath src:test run-tests.cljs
 ```
 
+## anchor → code_graph definition-CID 結合（ADR-2607160005/2607161325）
+
+`delta.anchor` の `:anchor/def-cid`（定義テキストの content-addressed 識別子）は
+kotobase code_graph が definition CID に使うものと同一。`code-graph-ref` が
+code_graph の definition 参照形（`:code.definition/cid|name|kind`）に変換する。
+**同一定義テキストは surrounding code に関係なく同一 def-cid** になり、これが
+**delta op-log（どの op が定義に触れたか）と code_graph（content-addressed
+definitions）を結ぶ join key** になる。hash-fn を code_graph と同じ
+（sha256/CIDv1）にすれば CID が literal に一致。
+
 ## ⑱ 構造 anchor + IStore 永続化（ADR-2607160005）
 
 - `delta.anchor`: op を行番号でなく **定義（kind+name）+ content hash** に
