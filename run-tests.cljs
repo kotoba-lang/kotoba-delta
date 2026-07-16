@@ -1,7 +1,8 @@
 #!/usr/bin/env nbb
 (ns run-tests
   (:require [cljs.test :refer [run-tests]]
-            [delta.op-test]))
+            [delta.op-test]
+            [delta.anchor]))
 
 (defmethod cljs.test/report [:cljs.test/default :end-run-tests] [m]
   (when-not (cljs.test/successful? m)

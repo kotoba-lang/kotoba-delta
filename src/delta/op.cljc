@@ -25,19 +25,30 @@
 
 (defn canonical-str
   "Deterministic payload (signed; :op/id = hash of this). Field order is
-  protocol; changing it is a format version bump."
-  [{:op/keys [parent actor at kind file old new turn]}]
-  (pr-str ["kotoba-delta/v1" parent actor at (name kind) file old new turn]))
+  protocol; changing it is a format version bump. v2 adds :op/anchor — the
+  structural anchor (delta.anchor) of the definition the edit touches, so
+  provenance survives code motion, not just a file path."
+  [{:op/keys [parent actor at kind file old new turn anchor]}]
+  (pr-str ["kotoba-delta/v2" parent actor at (name kind) file old new turn anchor]))
 
 (defn op-id [hash-fn op] (hash-fn (canonical-str op)))
 
 (defn make-op
-  [{:keys [parent actor at kind file old new turn]}]
+  [{:keys [parent actor at kind file old new turn anchor]}]
   (cond-> {:op/parent parent :op/actor actor :op/at at
            :op/kind kind :op/file file}
-    (some? old)  (assoc :op/old old)
-    (some? new)  (assoc :op/new new)
-    (some? turn) (assoc :op/turn turn)))
+    (some? old)    (assoc :op/old old)
+    (some? new)    (assoc :op/new new)
+    (some? turn)   (assoc :op/turn turn)
+    (some? anchor) (assoc :op/anchor anchor)))
+
+(defn log-head
+  "The op-log head = the id of the last op (or nil for an empty log). This is
+  what folds into the signed fleet head (ADR-2607160005): a fleet head over
+  fleet-db content + the op-log head certifies the manifest AND the edit
+  provenance together."
+  [hash-fn ops]
+  (when (seq ops) (op-id hash-fn (last ops))))
 
 ;; ---------------------------------------------------------------------------
 ;; admission (secrets redaction + signature + chain)
