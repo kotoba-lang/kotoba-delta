@@ -58,12 +58,28 @@
        vec))
 
 (defn anchor-of
-  "Anchor for a definition by name: {:anchor/kind :anchor/name :anchor/hash}.
-  The hash pins the exact content at anchoring time; resolving later reports
-  whether it's unchanged, moved (same hash, new offset), or edited."
+  "Anchor for a definition by name. Carries :anchor/def-cid — the definition's
+  content-addressed identity (hash of its canonical text), which is exactly
+  what kotobase code_graph uses as a definition CID. So a delta op anchored to
+  a definition and a code_graph definition of the same code share one CID: the
+  op-log and the code graph join on :anchor/def-cid. hash-fn should be the
+  same content-address function code_graph uses (sha256/CIDv1) for the CIDs to
+  literally match."
   [hash-fn src def-name]
   (when-let [d (first (filter #(= def-name (:name %)) (definitions hash-fn src)))]
-    {:anchor/kind (:kind d) :anchor/name (:name d) :anchor/hash (:hash d)}))
+    {:anchor/kind (:kind d) :anchor/name (:name d)
+     :anchor/hash (:hash d)            ;; back-compat alias
+     :anchor/def-cid (:hash d)}))
+
+(defn code-graph-ref
+  "Map an anchor to a kotobase code_graph definition reference — the shape you
+  look up in code_graph's `definitions` collection (store/-get s definitions
+  cid). Lets 'which op touched this definition' be queried across the delta
+  op-log AND the code graph via the shared definition CID."
+  [anchor]
+  {:code.definition/cid (:anchor/def-cid anchor)
+   :code.definition/name (:anchor/name anchor)
+   :code.definition/kind (:anchor/kind anchor)})
 
 (defn resolve-anchor
   "Resolve an anchor against a (possibly changed) source.

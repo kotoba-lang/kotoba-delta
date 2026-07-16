@@ -1,5 +1,6 @@
 (ns delta.op-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
             [delta.op :as op]
             [delta.anchor]))
 
@@ -109,3 +110,20 @@
     (testing "log-head is the last op's id; nil for empty log"
       (is (nil? (op/log-head h [])))
       (is (= (op/op-id h o2) (op/log-head h [o1 o2]))))))
+
+(deftest anchor-code-graph-ref
+  (let [h #(str "cid" (hash %))
+        src "(ns a)\n(defn foo [x] (* x 2))\n"
+        a (delta.anchor/anchor-of h src "foo")]
+    (testing "anchor carries a code_graph-compatible definition CID"
+      (is (= (:anchor/hash a) (:anchor/def-cid a)))
+      (is (str/starts-with? (:anchor/def-cid a) "cid")))
+    (testing "code-graph-ref shape joins delta provenance to code_graph definitions"
+      (let [ref (delta.anchor/code-graph-ref a)]
+        (is (= (:anchor/def-cid a) (:code.definition/cid ref)))
+        (is (= "foo" (:code.definition/name ref)))
+        (is (= "defn" (:code.definition/kind ref)))))
+    (testing "same definition text -> same def-cid in delta and code_graph (the join key)"
+      (let [a2 (delta.anchor/anchor-of h "(ns b)\n\n(defn foo [x] (* x 2))\n" "foo")]
+        ;; identical def body -> identical def-cid regardless of surrounding code
+        (is (= (:anchor/def-cid a) (:anchor/def-cid a2)))))))
