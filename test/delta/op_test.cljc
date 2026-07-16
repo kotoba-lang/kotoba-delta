@@ -1,6 +1,7 @@
 (ns delta.op-test
   (:require [clojure.test :refer [deftest is testing]]
-            [delta.op :as op]))
+            [delta.op :as op]
+            [delta.anchor]))
 
 (def fake-hash #(str "H" (hash %)))
 (defn fake-sign [pub payload] (str "SIG:" pub ":" (fake-hash payload)))
@@ -57,3 +58,54 @@
       (is (= :file-not-found
              (get-in (op/replay {} [(op/make-op {:actor "a" :at "t" :kind :remove :file "z"})])
                      [:conflict :reason]))))))
+
+;; ---------------------------------------------------------------------------
+;; ⑱ structural anchors — references survive code motion
+
+(deftest anchor-survives-code-motion
+  (let [h #(str "H" (hash %))
+        v1 "(ns app.core)\n\n(defn foo [x] (* x 2))\n\n(defn bar [y] (+ y 1))\n"
+        ;; unrelated code inserted ABOVE foo — every line number shifts
+        v2 "(ns app.core)\n\n(def config {:a 1 :b 2})\n\n(defn helper [] :ok)\n\n(defn foo [x] (* x 2))\n\n(defn bar [y] (+ y 1))\n"
+        ;; foo's body edited
+        v3 "(ns app.core)\n\n(defn foo [x] (* x 3))\n\n(defn bar [y] (+ y 1))\n"
+        ;; foo removed
+        v4 "(ns app.core)\n\n(defn bar [y] (+ y 1))\n"
+        a (delta.anchor/anchor-of h v1 "foo")]
+    (testing "anchor captures the definition, not a line"
+      (is (= "foo" (:anchor/name a)))
+      (is (= "defn" (:anchor/kind a))))
+    (testing "definitions enumerated"
+      (is (= ["foo" "bar"] (map :name (delta.anchor/definitions h v1)))))
+    (testing "unchanged source resolves :unchanged at same offset"
+      (let [s0 (:start (first (filter #(= "foo" (:name %)) (delta.anchor/definitions h v1))))]
+        (is (= :unchanged (:status (delta.anchor/resolve-anchor h v1 a s0))))))
+    (testing "code inserted above -> :moved (line anchor would break, this doesn't)"
+      (let [s0 (:start (first (filter #(= "foo" (:name %)) (delta.anchor/definitions h v1))))
+            r (delta.anchor/resolve-anchor h v2 a s0)]
+        (is (:found? r))
+        (is (= :moved (:status r)))
+        (is (not= s0 (:start r)))))
+    (testing "body edited -> :edited"
+      (is (= :edited (:status (delta.anchor/resolve-anchor h v3 a)))))
+    (testing "definition removed -> :gone"
+      (is (= :gone (:status (delta.anchor/resolve-anchor h v4 a)))))
+    (testing "strings/comments don't confuse the splitter"
+      (let [tricky "(defn s [] \"a ) b ( c\") ; (defn fake [])\n(defn real [] 1)\n"]
+        (is (= ["s" "real"] (map :name (delta.anchor/definitions h tricky))))))))
+
+(deftest op-anchor-and-log-head
+  (let [h #(str "H" (hash %))
+        src "(ns a)\n(defn foo [x] (* x 2))\n"
+        anc (delta.anchor/anchor-of h src "foo")
+        o1 (op/make-op {:actor "a" :at "t" :kind :edit :file "a.cljc"
+                        :old "(* x 2)" :new "(* x 3)" :anchor anc})
+        o2 (op/make-op {:parent (op/op-id h o1) :actor "a" :at "t2"
+                        :kind :write :file "b.cljc" :new "x"})]
+    (testing "op carries the structural anchor and it's in the signed payload"
+      (is (= anc (:op/anchor o1)))
+      (is (re-find #"foo" (op/canonical-str o1)))
+      (is (re-find #"kotoba-delta/v2" (op/canonical-str o1))))
+    (testing "log-head is the last op's id; nil for empty log"
+      (is (nil? (op/log-head h [])))
+      (is (= (op/op-id h o2) (op/log-head h [o1 o2]))))))

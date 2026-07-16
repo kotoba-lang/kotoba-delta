@@ -42,6 +42,20 @@ nbb --classpath src bin/delta.cljs project --log ops.edn --repo DIR   # 決定�
 nbb --classpath src:test run-tests.cljs
 ```
 
+## ⑱ 構造 anchor + IStore 永続化（ADR-2607160005）
+
+- `delta.anchor`: op を行番号でなく **定義（kind+name）+ content hash** に
+  anchor。コード移動に耐える（DeltaDB の "references survive as code moves"
+  を kotoba-native に）。resolve は :unchanged/:moved/:edited/:gone を返す。
+  balanced-delimiter splitter で文字列・コメントを誤認しない。
+- `delta.op` v2: op が `:op/anchor` を**署名 payload に**含む（provenance が
+  file path でなく定義に紐付く）。`log-head` が op-log head を返す。
+- `delta.store`: op-log を **kotobase IStore stream**（append + monotonic
+  :seq、cursor resume）で永続化。LocalStore standalone でも kotobase.net の
+  KotobaseStore でも同一契約（`KotobaseStore ≡ LocalStore`）。log-head +
+  :seq cursor が **signed fleet head に折り込まれ**、manifest と編集
+  provenance を一つの署名 head が証明する。
+
 ## 位置づけ / roadmap
 
 - core は pure `.cljc`（`delta.op`）、IO は nbb CLI。kotobase の
