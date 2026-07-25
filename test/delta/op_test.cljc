@@ -119,8 +119,10 @@
     (testing "known actor yields only that actor's ops, in order"
       (let [result (op/ops-by-actor ops "alice")]
         (is (= 2 (count result)))
-        (is (= "alice" (:op/actor (first result))))
-        (is (= "alice" (:op/actor (last result))))))
+        (is (= ["alice" "alice"] (map :op/actor result)))
+        ;; the ORDER claim needs a field that differs between the two kept ops:
+        ;; asserting both are alice holds under any ordering
+        (is (= ["t1" "t3"] (map :op/at result)))))
     (testing "unknown actor yields empty result"
       (is (= [] (op/ops-by-actor ops "charlie"))))))
 
