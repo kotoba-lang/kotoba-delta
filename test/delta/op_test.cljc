@@ -111,6 +111,21 @@
       (is (nil? (op/log-head h [])))
       (is (= (op/op-id h o2) (op/log-head h [o1 o2]))))))
 
+(deftest ops-by-actor-filters
+  (let [ops [(op/make-op {:actor "alice" :at "t1" :kind :write :file "a" :new "1"})
+             (op/make-op {:actor "bob"   :at "t2" :kind :write :file "b" :new "2"})
+             (op/make-op {:actor "alice" :at "t3" :kind :edit :file "a" :old "1" :new "11"})
+             (op/make-op {:actor "bob"   :at "t4" :kind :write :file "c" :new "3"})]]
+    (testing "known actor yields only that actor's ops, in order"
+      (let [result (op/ops-by-actor ops "alice")]
+        (is (= 2 (count result)))
+        (is (= ["alice" "alice"] (map :op/actor result)))
+        ;; the ORDER claim needs a field that differs between the two kept ops:
+        ;; asserting both are alice holds under any ordering
+        (is (= ["t1" "t3"] (map :op/at result)))))
+    (testing "unknown actor yields empty result"
+      (is (= [] (op/ops-by-actor ops "charlie"))))))
+
 (deftest anchor-code-graph-ref
   (let [h #(str "cid" (hash %))
         src "(ns a)\n(defn foo [x] (* x 2))\n"
