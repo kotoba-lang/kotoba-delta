@@ -124,6 +124,11 @@
           {:files files :applied n :conflict (:conflict r)}
           (recur r more (inc n)))))))
 
+(defn ops-by-actor
+  "Return ops in log order whose :op/actor equals `actor`."
+  [ops actor]
+  (filter #(= (:op/actor %) actor) ops))
+
 (defn content-hash
   "Deterministic hash of a whole files map (projection identity):
   hash of sorted [path hash-of-content] pairs."
