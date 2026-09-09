@@ -18,7 +18,7 @@
     turn that produced it — provenance from prompt to line.
 
   Pure cljc; crypto injected ({:sign-fn :verify-fn :hash-fn}) like fleet.pin."
-  (:require [kotoba.lang.text :as str]))
+  (:require [clojure.string :as str]))
 
 ;; ---------------------------------------------------------------------------
 ;; canonical form + identity

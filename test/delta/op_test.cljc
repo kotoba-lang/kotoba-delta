@@ -1,6 +1,6 @@
 (ns delta.op-test
   (:require [clojure.test :refer [deftest is testing]]
-            [kotoba.lang.text :as str]
+            [clojure.string :as str]
             [delta.op :as op]
             [delta.anchor]))
 
