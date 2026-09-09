@@ -11,7 +11,7 @@
   Pure cljc. Uses a balanced-delimiter top-level splitter (robust across
   reader conditionals / metadata that trip a naive reader), not the full
   Clojure reader — we only need to locate top-level def forms."
-  (:require [kotoba.lang.text :as str]))
+  (:require [clojure.string :as str]))
 
 (defn top-level-forms
   "Split source into top-level forms with their char offsets, skipping
