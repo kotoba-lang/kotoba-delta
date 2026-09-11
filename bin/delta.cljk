@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns delta.cli
   "kotoba-delta CLI (ADR-2607161325).
   record  --log L --key PEM --workspace D --kind edit|write|remove --file F

@@ -28,18 +28,18 @@ log** として記録し、決定的に replay / git projection する。
 ## Usage
 
 ```bash
-nbb --classpath src bin/delta.cljk record --log ops.edn --key agent.pem \
+kbb --backend sci --classpath src bin/delta.cljk record --log ops.edn --key agent.pem \
     --kind edit --file src/a.cljc --old '(def x 1)' --new '(def x 2)' \
     --turn conv-xxx/turn-43 [--workspace DIR]
-nbb --classpath src bin/delta.cljk verify  --log ops.edn
-nbb --classpath src bin/delta.cljk replay  --log ops.edn --workspace DIR
-nbb --classpath src bin/delta.cljk project --log ops.edn --repo DIR   # 決定的 commit
+kbb --backend sci --classpath src bin/delta.cljk verify  --log ops.edn
+kbb --backend sci --classpath src bin/delta.cljk replay  --log ops.edn --workspace DIR
+kbb --backend sci --classpath src bin/delta.cljk project --log ops.edn --repo DIR   # 決定的 commit
 ```
 
 ## Tests
 
 ```bash
-nbb --classpath src:test run-tests.cljk
+kbb --backend sci --classpath src:test run-tests.cljk
 ```
 
 ## anchor → code_graph definition-CID 結合（ADR-2607160005/2607161325）

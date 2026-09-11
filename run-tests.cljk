@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns run-tests
   (:require [cljs.test :refer [run-tests]]
             [delta.op-test]
